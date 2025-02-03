@@ -25,6 +25,28 @@ app.get('/',(req,res)=>{
 
 io.on("connection", function(socket){
     console.log("Connected");
+
+    if (!players.white) {
+        players.white = socket.id;
+        socket.emit("PlayerRole", "W");
+    }
+    else if (!players.black) {
+        players.black = socket.id;
+        socket.emit("PlayerRole", "B");
+    }
+    else {
+        socket.emit("SpectatorRole");
+    }
+    
+    socket.on("disconnect" , function (){
+        if (socket.id === players.white) {
+            delete players.white;
+        }
+        else if (socket.id === players.black) {
+            delete players.black;
+        }
+        console.log("Disconnected");
+    });
 })
 
 server.listen(3000, function () {
