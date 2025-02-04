@@ -4,6 +4,7 @@ const socket = require('socket.io');
 const { Chess } = require('chess.js');
 const path = require('path');
 const { title } = require('process');
+const { log } = require('console');
 
 const app = express();
 
@@ -14,7 +15,7 @@ const io = socket(server);
 const chess = new Chess();
 
 let players = {};
-let currPlayer = "W";
+let currPlayer = "w";
 
 app.set("view engine", "ejs");
 app.use(express.static(path.join(__dirname, "public")));
@@ -28,11 +29,11 @@ io.on("connection", function(socket){
 
     if (!players.white) {
         players.white = socket.id;
-        socket.emit("PlayerRole", "W");
+        socket.emit("PlayerRole", "w");
     }
     else if (!players.black) {
         players.black = socket.id;
-        socket.emit("PlayerRole", "B");
+        socket.emit("PlayerRole", "b");
     }
     else {
         socket.emit("SpectatorRole");
@@ -47,6 +48,28 @@ io.on("connection", function(socket){
         }
         console.log("Disconnected");
     });
+
+    socket.on("move", (move)=>{
+        try{
+            if (chess.turn() === "w" && socket.id !== players.white) return ;
+            if (chess.turn() === "b" && socket.id !== players.black) return ;
+
+            const result = chess.move(move);
+
+            if (result) {
+                currPlayer = chess.turn();
+                io.emit("move", move);
+                io.emit("boardState", chess.fen());
+            }
+            else {
+                console.log("Invalid move : ", move);
+                socket.emit("invalidMove", move);
+            }
+        } catch(err){
+            console.log(err);
+            socket.emit("invalidMove", move);
+        }
+    })
 })
 
 server.listen(3000, function () {
